@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floating Gallery – AQSA ZAM ZAM MIRZA JOHAR BAIG</title>
+  <meta name="description" content="A stunning floating image gallery with smooth random motion animations." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-dark:   #050810;
+      --bg-mid:    #0b1024;
+      --accent-1:  #7c3aed;
+      --accent-2:  #06b6d4;
+      --accent-3:  #f59e0b;
+      --glow-1: rgba(124, 58, 237, 0.45);
+      --glow-2: rgba(6, 182, 212, 0.35);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      font-family: 'Outfit', sans-serif;
+      color: #e2e8f0;
+      user-select: none;
+    }
+
+    /* ── Animated Gradient Background ────────────────────────── */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 30%, var(--glow-1) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, var(--glow-2) 0%, transparent 70%),
+        linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-mid) 50%, #0d0f1e 100%);
+      animation: bgShift 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgShift {
+      0%   { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(30deg); }
+    }
+
+    /* ── Starfield particles ──────────────────────────────────── */
+    .stars {
+      position: fixed; inset: 0; z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      animation: twinkle var(--dur) ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      from { opacity: var(--min-op); transform: scale(0.8); }
+      to   { opacity: var(--max-op); transform: scale(1.2); }
+    }
+
+    /* ── Title ────────────────────────────────────────────────── */
+    .title-wrap {
+      position: fixed;
+      top: 28px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      text-align: center;
+      pointer-events: none;
+    }
+    .title-wrap h1 {
+      font-size: clamp(1.1rem, 3vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      background: linear-gradient(90deg, var(--accent-2), #a78bfa, var(--accent-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 0 18px var(--glow-1));
+    }
+    .title-wrap p {
+      font-size: 0.82rem;
+      font-weight: 300;
+      color: rgba(226,232,240,0.5);
+      margin-top: 4px;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── Gallery Stage ────────────────────────────────────────── */
+    #stage {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    /* ── Floating Image Card ──────────────────────────────────── */
+    .img-card {
+      position: absolute;
+      border-radius: 18px;
+      cursor: pointer;
+      will-change: transform, box-shadow;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      border: 2px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      /* box size set by JS */
+    }
+
+    .img-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .img-card img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+      border-radius: 12px;
+      background: transparent;
+      transition: transform 0.4s ease, filter 0.4s ease;
+    }
+
+    /* hover pop */
+    .img-card:hover {
+      z-index: 500 !important;
+      border-color: rgba(124,58,237,0.6);
+      box-shadow:
+        0 0 0 1px rgba(124,58,237,0.4),
+        0 8px 40px rgba(124,58,237,0.45),
+        0 24px 80px rgba(0,0,0,0.6);
+    }
+    .img-card:hover img {
+      transform: scale(1.07);
+      filter: brightness(1.1) saturate(1.2);
+    }
+
+    /* ── Lightbox ─────────────────────────────────────────────── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5,8,16,0.92);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    #lightbox.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #lightbox img {
+      max-width: min(90vw, 900px);
+      max-height: 85vh;
+      border-radius: 20px;
+      box-shadow:
+        0 0 0 1px rgba(124,58,237,0.4),
+        0 24px 80px rgba(124,58,237,0.4),
+        0 40px 120px rgba(0,0,0,0.7);
+      transform: scale(0.85);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #lightbox.active img { transform: scale(1); }
+
+    #lightbox-close {
+      position: absolute;
+      top: 24px; right: 32px;
+      font-size: 2rem; color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s, transform 0.2s;
+    }
+    #lightbox-close:hover { color: #fff; transform: scale(1.2) rotate(90deg); }
+
+    #lightbox-label {
+      position: absolute;
+      bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.55);
+    }
+
+    /* ── Speed control ────────────────────────────────────────── */
+    .controls {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(11,16,36,0.75);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 50px;
+      padding: 10px 24px;
+    }
+    .controls label {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .controls input[type="range"] {
+      width: 110px;
+      accent-color: var(--accent-1);
+      cursor: pointer;
+    }
+    .controls span {
+      font-size: 0.8rem;
+      color: var(--accent-2);
+      font-weight: 600;
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* ── Pause button ─────────────────────────────────────────── */
+    #pause-btn {
+      position: fixed;
+      bottom: 24px; right: 32px;
+      z-index: 200;
+      background: rgba(124,58,237,0.2);
+      border: 1px solid rgba(124,58,237,0.45);
+      color: #a78bfa;
+      border-radius: 50px;
+      padding: 9px 20px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: background 0.25s, color 0.25s, transform 0.2s;
+    }
+    #pause-btn:hover {
+      background: rgba(124,58,237,0.45);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background -->
+  <div class="bg-canvas"></div>
+  <div class="stars" id="stars"></div>
+
+  <!-- Title -->
+  <div class="title-wrap">
+    <h1>✦ AQSA ZAM ZAM MIRZA JOHAR BAIG ✦</h1>
+    <p>FLOATING GALLERY &nbsp;·&nbsp; CLICK ANY IMAGE TO EXPAND</p>
+  </div>
+
+  <!-- Gallery Stage -->
+  <div id="stage"></div>
+
+  <!-- Lightbox -->
+  <div id="lightbox">
+    <span id="lightbox-close">✕</span>
+    <img id="lightbox-img" src="" alt="Full View" />
+    <div id="lightbox-label"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <label for="speed-range">⚡ SPEED</label>
+    <input type="range" id="speed-range" min="0.2" max="4" step="0.1" value="1" />
+    <span id="speed-val">1×</span>
+  </div>
+
+  <button id="pause-btn">⏸ PAUSE</button>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       CONFIG
+    ═══════════════════════════════════════════════════════════ */
+    const IMAGE_NAMES = [
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-1.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-2.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-3.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-4.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-5.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-6.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-7.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-8.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-9.jpg',
+      'AQSA-ZAM-ZAM-MIRZA-JOHAR-BAIG-10.jpg',
+    ];
+
+    // Directions: normalized dx, dy  (8 directions + random diagonals)
+    const DIRECTIONS = [
+      {dx:1, dy:0},   // right
+      {dx:-1, dy:0},  // left
+      {dx:0, dy:1},   // down
+      {dx:0, dy:-1},  // up
+      {dx:1, dy:1},   // down-right
+      {dx:-1, dy:1},  // down-left
+      {dx:1, dy:-1},  // up-right
+      {dx:-1, dy:-1}, // up-left
+    ];
+
+    /* ═══════════════════════════════════════════════════════════
+       STARFIELD
+    ═══════════════════════════════════════════════════════════ */
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 120; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      const dur = (Math.random() * 3 + 1.5).toFixed(2);
+      const minOp = (Math.random() * 0.2 + 0.05).toFixed(2);
+      const maxOp = (Math.random() * 0.6 + 0.3).toFixed(2);
+      Object.assign(s.style, {
+        width: size + 'px', height: size + 'px',
+        top: Math.random() * 100 + '%',
+        left: Math.random() * 100 + '%',
+        '--dur': dur + 's',
+        '--min-op': minOp,
+        '--max-op': maxOp,
+        animationDelay: (Math.random() * 3) + 's',
+      });
+      starsEl.appendChild(s);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       IMAGE CARDS  –  physics state
+    ═══════════════════════════════════════════════════════════ */
+    const stage = document.getElementById('stage');
+    let W = window.innerWidth, H = window.innerHeight;
+
+    const CARD_MIN = 220, CARD_MAX = 320;  // px – medium size, full image visible
+    let speedMultiplier = 1;
+    let paused = false;
+
+    const cards = IMAGE_NAMES.map((name, i) => {
+      // Card dimensions – use natural image aspect ratio after load
+      const w = rand(CARD_MIN, CARD_MAX);
+      const h = rand(CARD_MIN * 0.68, CARD_MAX * 0.68);  // ~3:2 ratio default
+
+      // Start position (scattered)
+      const x = rand(20, W - w - 20);
+      const y = rand(90, H - h - 80);
+
+      // Pick a random direction
+      const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+
+      // Speed (px/frame at 60fps) – vary per card
+      const spd = rand(0.6, 2.2);
+
+      // Slight rotation bob
+      const rotMax = rand(3, 12);
+
+      // DOM
+      const card = document.createElement('div');
+      card.className = 'img-card';
+      card.id = `card-${i}`;
+      card.style.cssText = `width:${w}px;height:${h}px;left:${x}px;top:${y}px;
+        box-shadow:0 12px 48px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.08);
+        z-index:${10 + i}; background:rgba(5,8,16,0.6);`;
+
+      const img = document.createElement('img');
+      img.src = name;
+      img.alt = name.replace('.jpg','');
+      img.loading = 'lazy';
+      card.appendChild(img);
+
+      card.addEventListener('click', () => openLightbox(name));
+
+      stage.appendChild(card);
+
+      const c = {
+        el: card, x, y, w, h,
+        dx: dir.dx, dy: dir.dy,
+        spd,
+        rotDir: Math.random() > 0.5 ? 1 : -1,
+        rotMax,
+        rotAngle: 0,
+        rotSpeed: rand(0.005, 0.04),
+        rotPhase: Math.random() * Math.PI * 2,
+        changeIn: rand(200, 800),
+        tick: 0,
+        hue: rand(0, 360),
+        hueSpeed: rand(0.2, 1.2),
+      };
+
+      // Once loaded, snap card height to match the image's real aspect ratio
+      img.addEventListener('load', () => {
+        if (img.naturalWidth && img.naturalHeight) {
+          const aspect = img.naturalWidth / img.naturalHeight;
+          const newH = Math.round(c.w / aspect);
+          c.el.style.height = newH + 'px';
+          c.h = newH;
+        }
+      });
+
+      return c;
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       ANIMATION LOOP
+    ═══════════════════════════════════════════════════════════ */
+    let lastTime = performance.now();
+
+    function loop(now) {
+      requestAnimationFrame(loop);
+      if (paused) return;
+
+      const dt = Math.min((now - lastTime) / 16.67, 3); // frame delta (1 = 60fps)
+      lastTime = now;
+
+      W = window.innerWidth; H = window.innerHeight;
+
+      cards.forEach(c => {
+        c.tick++;
+        c.hue = (c.hue + c.hueSpeed * dt) % 360;
+
+        // Move
+        c.x += c.dx * c.spd * speedMultiplier * dt;
+        c.y += c.dy * c.spd * speedMultiplier * dt;
+
+        // Bounce off walls
+        if (c.x <= 0)        { c.x = 0;          c.dx = Math.abs(c.dx) || 1; maybeChangeDir(c); }
+        if (c.x >= W - c.w)  { c.x = W - c.w;    c.dx = -Math.abs(c.dx) || -1; maybeChangeDir(c); }
+        if (c.y <= 0)        { c.y = 0;           c.dy = Math.abs(c.dy) || 1; maybeChangeDir(c); }
+        if (c.y >= H - c.h)  { c.y = H - c.h;    c.dy = -Math.abs(c.dy) || -1; maybeChangeDir(c); }
+
+        // Random direction change
+        c.changeIn -= dt;
+        if (c.changeIn <= 0) {
+          randomDir(c);
+          c.changeIn = rand(200, 900);
+        }
+
+        // Gentle rotation bob
+        c.rotAngle = Math.sin(c.tick * c.rotSpeed + c.rotPhase) * c.rotMax;
+
+        // Dynamic glow
+        const glowAlpha = 0.25 + 0.15 * Math.sin(c.tick * 0.02);
+        const glow = `hsl(${c.hue},80%,65%)`;
+
+        c.el.style.transform =
+          `translate(${c.x}px, ${c.y}px) rotate(${c.rotAngle}deg)`;
+        c.el.style.left = '0';
+        c.el.style.top  = '0';
+        c.el.style.boxShadow =
+          `0 8px 32px rgba(0,0,0,0.55),
+           0 0 20px ${glowAlpha > 0.3 ? glow : 'transparent'},
+           0 0 0 1px rgba(255,255,255,0.07)`;
+      });
+    }
+
+    requestAnimationFrame(loop);
+
+    /* ═══════════════════════════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════════════════════════ */
+    function rand(a, b) { return Math.random() * (b - a) + a; }
+
+    function randomDir(c) {
+      // pick a random unit-ish direction with small randomness
+      const angle = Math.random() * Math.PI * 2;
+      c.dx = Math.cos(angle);
+      c.dy = Math.sin(angle);
+    }
+
+    function maybeChangeDir(c) {
+      // 30% chance to pick a completely new angle on bounce
+      if (Math.random() < 0.3) randomDir(c);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LIGHTBOX
+    ═══════════════════════════════════════════════════════════ */
+    const lightbox     = document.getElementById('lightbox');
+    const lightboxImg  = document.getElementById('lightbox-img');
+    const lightboxLbl  = document.getElementById('lightbox-label');
+    const lightboxClose = document.getElementById('lightbox-close');
+
+    function openLightbox(name) {
+      lightboxImg.src = name;
+      lightboxLbl.textContent = name.replace('.jpg','').replace(/-/g,' ');
+      lightbox.classList.add('active');
+      paused = true;
+    }
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      paused = false;
+      lastTime = performance.now();
+    }
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ═══════════════════════════════════════════════════════════
+       CONTROLS
+    ═══════════════════════════════════════════════════════════ */
+    const speedRange = document.getElementById('speed-range');
+    const speedVal   = document.getElementById('speed-val');
+    speedRange.addEventListener('input', () => {
+      speedMultiplier = parseFloat(speedRange.value);
+      speedVal.textContent = speedMultiplier.toFixed(1) + '×';
+    });
+
+    const pauseBtn = document.getElementById('pause-btn');
+    pauseBtn.addEventListener('click', () => {
+      paused = !paused;
+      pauseBtn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+      if (!paused) lastTime = performance.now();
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       RESIZE
+    ═══════════════════════════════════════════════════════════ */
+    window.addEventListener('resize', () => { W = window.innerWidth; H = window.innerHeight; });
+  </script>
+</body>
+</html>
